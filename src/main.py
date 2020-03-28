@@ -138,7 +138,7 @@ async def rm(ctx, extension: str):
         raise e
 
     await ctx.send(f"Successfully removed and unloaded {extension}")
-    LOCAL_LOGGER.info(f"Disabled and removed {extension}")
+    local_logger.info(f"Disabled and removed {extension}")
 
 
 @ext.command()

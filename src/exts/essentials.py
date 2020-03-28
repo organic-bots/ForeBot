@@ -94,8 +94,9 @@ class Essentials(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """handles command errors"""
-        raise error
+        #raise error
         local_logger.error(error)
+        print(error)
         if type(error) in ERRS_MAPPING.keys():
             msg = get_embed_err(ERRS_MAPPING[type(error)])
             if ERRS_MAPPING[error][2] is False:

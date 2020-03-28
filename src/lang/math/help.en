@@ -1,0 +1,3 @@
+{
+    "tex": ["Renders tex formulas. Supports all of the `ansmath` tex package. Plotting and similar graphics functions are not yet supported. `\\begin` and `\\end` commands are not supported either so you can't allign your equations.", "<formula...>` renders the specified formula"]
+}

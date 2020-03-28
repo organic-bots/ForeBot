@@ -40,7 +40,6 @@ EMOJIS = {
     "wave": "\U0001F44B",
     "no_entry_sign": "\U0001F6AB",
     "red_circle": "\U0001F534",
-    "white_circle": "\U000026AA",
     "large_blue_circle": "\U0001F535",
     "tada": "\U0001F389",
     "hammer": "\U0001F528",
@@ -83,6 +82,7 @@ CONFIG_FOLDER = "servers"
 TODO_FOLDER = "todo"
 TIMES_FOLDER = "countdowns"
 LANG_FOLDER = "lang"
+TEX_FOLDER = "tex"
 
 # roles
 ROLES_LEVEL = ["manager", "admin"]
@@ -97,6 +97,7 @@ DEFAULT_EXTENSIONS_JSON = {
     "poll": False,
     "time": False,
     "todo": False,
+    "math": False,
 }
 
 DEFAULT_SLAPPED_FILE = {"463665420054953995": 0}
@@ -188,9 +189,12 @@ ERR_UNSUFFICIENT_PERMS = (
     True,
 )
 ERR_CONVERSION = (
-    """Conversion error", "One of your arguments couldn't be converted into. This is either a `member`, `role` or `channel`. Do note that the arguments are **case-sensitive** and that they must be surrounded by quotes (`"`) if they contain spaces. If you can't get it to work, try mentionning the role/member/channel. If even this fails then whatever you tried to mention isn't part of this server anymore and there's nothing we can do about it!""",
+    "Conversion error", """One of your arguments couldn't be converted into. This is either a `member`, `role` or `channel`. Do note that the arguments are **case-sensitive** and that they must be surrounded by quotes (`"`) if they contain spaces. If you can't get it to work, try mentionning the role/member/channel. If even this fails then whatever you tried to mention isn't part of this server anymore and there's nothing we can do about it!""",
     False,
 )
+
+ERR_MAX_CONCURRENCY = ("Concurrency Error.", "You can only use this command one at a time. Wait for the previous one to expire before you call another one.", True)
+
 
 ERRS_MAPPING = {
     ce.MissingRequiredArgument: ERR_NOT_ENOUGH_ARG,
@@ -201,4 +205,5 @@ ERRS_MAPPING = {
     ce.BadArgument: ERR_MISFORMED,
     ce.CheckFailure: ERR_UNSUFFICIENT_PRIVILEGE,
     ce.ConversionError: ERR_CONVERSION,
+    ce.MaxConcurrencyReached: ERR_MAX_CONCURRENCY
 }
