@@ -37,7 +37,7 @@ class PollConfigEntry(ConfigEntry):
 
     async def run(self, ctx):
         try:
-            tr = Translator(name, get_lang(ctx))
+            tr = Translator(name, get_lang(ctx.guild.id))
             await self.config_channel.send(tr["start_conf"])
             pursue = await self.get_yn(ctx, tr["pursue"])
             if not pursue:
@@ -101,6 +101,15 @@ class Poll(commands.Cog):
         """currently makes this checks for ALL channels. Might want to change the behavior to allow reactions on other msgs"""
         # getting poll_allowed_chans
         # @is_init
+
+        # fetching concerned message and the user who added the reaction
+        message = await self.bot.get_channel(payload.channel_id).fetch_message(
+            payload.message_id
+        )
+        # making sure we're not in a DM
+        if not isinstance(message.channel, discord.TextChannel):
+            return
+
         with ConfigFile(payload.guild_id) as conf:
             poll_allowed_chans = conf["poll_channels"]
 
@@ -109,10 +118,6 @@ class Poll(commands.Cog):
             payload.channel_id in poll_allowed_chans
         ):
 
-            # fetching concerned message and the user who added the reaction
-            message = await self.bot.get_channel(payload.channel_id).fetch_message(
-                payload.message_id
-            )
             user = self.bot.get_user(payload.user_id)
 
             if f"{message.id}.json" in os.listdir(POLL_FOLDER):
@@ -122,11 +127,13 @@ class Poll(commands.Cog):
                         if str(payload.emoji) in settings["unicode"]:
                             good = True
                     else:
-                        #this is a custom emoji
+                        # this is a custom emoji
                         if payload.emoji.id in settings["custom"]:
                             good = True
                     if not good:
-                        local_logger.debug("User tried to add some forbidden reaction to an extended poll.")
+                        local_logger.debug(
+                            "User tried to add some forbidden reaction to an extended poll."
+                        )
                         await message.remove_reaction(payload.emoji, user)
                 return
 
@@ -203,9 +210,16 @@ class Poll(commands.Cog):
     async def on_message(self, message):
         if message.author == self.bot.user:
             return
+        if isinstance(message.channel, discord.DMChannel):
+            # we're in a DM
+            return
 
         if not was_init(message):
             await message.channel.send(embed=get_embed_err(ERR_NOT_SETUP))
+            return
+
+        # making sure we're not in a DM
+        if not isinstance(message.channel, discord.TextChannel):
             return
 
         # getting poll_allowed_chans
@@ -357,7 +371,7 @@ class Poll(commands.Cog):
         for choice in choices.split("\n"):
             it = choice.split(" ", 1)[0]
             if it.startswith("<"):
-                #this is a custom emoji
+                # this is a custom emoji
                 emotes["custom"].append(int(it.split(":", 2)[2][:-1]))
             else:
                 emotes["unicode"].append(it)

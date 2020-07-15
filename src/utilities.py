@@ -2,6 +2,7 @@ from collections import OrderedDict
 import logging
 import os
 import json
+from time import time
 import datetime
 import discord
 from settings import *
@@ -55,7 +56,11 @@ def is_init():
 
 def was_init(ctx):
     """same as the previous function except this one isn't a decorator. Mainly used for listenners"""
-    return f"{ctx.guild.id}.json" in os.listdir(CONFIG_FOLDER)
+    if ctx.guild:
+        return f"{ctx.guild.id}.json" in os.listdir(CONFIG_FOLDER)
+    else:
+        # so that we make sure the check doesn't fail in a DM
+        return True
 
 
 def has_auth(clearance, *args):
@@ -113,6 +118,10 @@ def assert_struct(guilds):
             TODO_FOLDER,
             CONFIG_FOLDER,
             LANG_FOLDER,
+            EVENT_FOLDER,
+            TIME_FOLDER,
+            EVENT_FOLDER,
+            REMINDERS_FOLDER,
             POLL_FOLDER,
         ]
         for folder in to_make:
@@ -150,16 +159,26 @@ def assert_struct(guilds):
 
 
 time_seps = ["d", "h", "m", "s"]
-DIGITS = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+DIGITS = ("0", "1", "2", "3", "4", "5", "6", "7", "8", "9")
 
 
-def to_datetime(argument, sub=True):
+def to_datetime(argument, sub=True, lenient=False):
+    """the date format is as such:
+    d => days
+    h => hours
+    m => minutes
+    s => seconds
+    """
+
     times = OrderedDict([("y", 0), ("M", 0), ("d", 0), ("h", 0), ("m", 0), ("s", 0)])
 
     last = 0
     for char, i in zip(argument, range(len(argument))):
         if char not in DIGITS:
             if char in time_seps:
+                if lenient:
+                    if len(argument[last:i]) == 0:
+                        return False
                 times[char] = int(argument[last:i])
                 last = i + 1
             else:
@@ -194,9 +213,19 @@ class ConfigFile(UserDict):
             folder: the folder to read the file from. This represents the kind of data handled
             fext:   the file extension. Only supports "json" for now
             force:  creates the file if not found
+            default:default dict to write in-place
             """
+    folder_mapping = {
+    CONFIG_FOLDER: DEFAULT_SERVER_FILE,
+    TIME_FOLDER: DEFAULT_MUTE_FILE,
+    SLAPPING_FOLDER: DEFAULT_SLAPPED_FILE,
+    REMINDERS_FOLDER: {},
+    EVENT_FOLDER: {"partial": {}, "sent": {}},
+    }
 
-    def __init__(self, file, folder=CONFIG_FOLDER, fext="json", force=True):
+    def __init__(
+        self, file, folder=CONFIG_FOLDER, fext="json", force=True, default=None
+    ):
         super(ConfigFile, self).__init__()
         # since the ID is an int -> making sure it is considered as a string
         self.file = str(file)
@@ -205,16 +234,19 @@ class ConfigFile(UserDict):
         self.fext = fext
         self.force = force
 
+        if not default:
+            assert folder in ConfigFile.folder_mapping, local_logger.critical("Couldn't find a default for folder "+ folder)
+            self.default = self.data = ConfigFile.folder_mapping[folder]
+
         # currently only supports "json" files
-        # assert fext=="json", local_logger.error(f'''Can't load file with extension: {fext}''')
-        # if the extension is correct -> appending the extension name to the filename
         self.file += "." + self.fext
         # making path
         self.path = os.path.join(self.folder, self.file)
         # self.last_m_time = os.path.getmtime(self.path)
 
     def __enter__(self):
-        self.make_file()
+        if not self.make_file():
+            return self.default
         self.read()
         return self
 
@@ -230,33 +262,55 @@ class ConfigFile(UserDict):
             with open(
                 os.path.join(self.folder, self.file), "w", encoding="utf-8"
             ) as file:
-                json.dump({0: 0}, file)  # creating empty file
+                json.dump(self.default, file)  # creating empty file
+        else:
+            with open(os.path.join(self.folder, self.file), "r") as file:
+                try:
+                    json.load(file)
+                except Exception as e:
+                    if self.force:
+                        json.dump(self.default, file)
+                    else:
+                        return False
+        return True
+
+    def is_json(self, file):
+        try:
+            out = json.loads(file)
+        except:
+            return False
         return True
 
     def save(self):
-        """makes the file from the dict"""
+        """makes the file from the dict
+        can we really do anything if it fails to write? Save the original contents are write them again?"""
+        if not self.is_json(self.data):
+            raise ValueError(f"Incorrect JSON for updated {self.file}")
+            local_logger.critical(f"Discarding changes to {self.file} because they invalidated the JSON file.")
+
         try:
             with open(self.path, "w", encoding="utf-8") as file:
                 json.dump(self.data, file)
 
         except Exception as e:
+            local_logger.error(f"An exception occured while saving {self.file}.")
             local_logger.exception(e)
             raise e
 
     def read(self):
         """builds the dict from the file """
         try:
-            if not self.make_file:
-                return self.data
-
             with open(os.path.join(self.folder, self.file), "r") as file:
                 self.data = json.load(file)
 
             return self.data
 
         except Exception as e:
+            local_logger.error(f"An exception occured while reading {self.file}.")
             local_logger.exception(e)
             raise e
+            return self.default
+
 
 
 class Translator(object):
@@ -316,22 +370,28 @@ class Translator(object):
             )
 
 
-def get_lang(ctx):
-    with ConfigFile(ctx.guild.id) as conf:
+def get_lang(guild_id):
+    with ConfigFile(guild_id) as conf:
         return conf["lang"]
 
 
-class ConfigEntry:
+class ConfigEntry(object):
     """A generic configuration class that must subclasses to be used correctly in each extension."""
 
-    def __init__(self, bot, cfg_chan_id):
+    def __init__(self, bot, config_channel):
         self.bot = bot
         # only a single config channel because the class can have several instances, each for a different server
-        self.config_channel = cfg_chan_id
+        self.config_channel = config_channel
         self.allowed_answers = {1: ["yes", "y"], 0: ["no", "n"]}
 
-    def is_answer(self, ctx):
-        if ctx.channel == self.config_channel and ctx.author == ctx.guild.owner:
+        if isinstance(config_channel, discord.TextChannel):
+            self.owner = config_channel.guild.owner
+        else:
+            # in a DM
+            self.owner = config_channel.recipient
+
+    def is_answer(self, message):
+        if message.channel == self.config_channel and message.author == self.owner:
             return True
         return False
 
@@ -342,10 +402,7 @@ class ConfigEntry:
         return correct_answers
 
     def is_react_yn_answer(self, reaction, user):
-        if (
-            reaction.message.channel == self.config_channel
-            and user == reaction.message.guild.owner
-        ):
+        if reaction.message.channel == self.config_channel and user == self.owner:
             if reaction.emoji in [
                 EMOJIS["negative_squared_cross_mark"],
                 EMOJIS["white_check_mark"],
@@ -391,6 +448,52 @@ class ConfigEntry:
 
             await ctx.send(question)
 
+    async def get_datetime(
+        self, ctx, question, later: int = False, seconds: bool = False
+    ):
+        """"this returns a datetime object from a user message.
+        question: the question to ask the user
+        later: if true will refuse any datetime that is already in the past. Can either be an int for a treshold or bool for simple comparison.
+        seconds: if true returns a int representing seconds instead of a datetime"""
+
+        await ctx.send(question)
+        true_time = False
+        while not true_time:
+            response = await self.bot.wait_for("message", check=self.is_answer)
+            true_time = to_datetime(response.content, sub=False, lenient=True)
+
+            if not true_time:
+                await ctx.send("The time you entered is incorrect, please try again.")
+                continue
+            else:
+                if later:
+                    if type(later) == int:
+                        if true_time.total_seconds() <= later:
+                            continue
+                    else:
+                        if true_time.total_seconds() <= 0:
+                            continue
+
+                if seconds:
+                    return true_time.total_seconds()
+                return true_time
+
+    async def get_color(self, ctx, question: str):
+        await ctx.send(question)
+        color = None
+        while not color:
+            response = await self.bot.wait_for("message", check=self.is_answer)
+            if response.content.startswith("#"):
+                base = 16
+            else:
+                base = 10
+
+            try:
+                color = discord.Color(int(response.content, base=base))
+                return color
+            except Exception as e:
+                continue
+
     def filter_msg(self, msg):
         # assert filters != None, TypeError("You must set filters to filter a message.")
 
@@ -405,3 +508,20 @@ class ConfigEntry:
     async def run(self, ctx):
         """this functions serves as placeholder for the instances which should override it"""
         pass
+
+
+async def audit(guild, *args, **kwargs):
+    """audits the provided message to the moderation channel of the guild if set"""
+    try:
+        with ConfigFile(guild.id) as config:
+            audit_chan = config["commode"]["reports_chan"]
+            if audit_chan:
+                audit_chan = guild.get_channel(audit_chan)
+                await audit_chan.send(*args, **kwargs)
+
+    except Exception as e:
+        local_logger.error(
+            f"Couldn't record audit log in the moderation channel of {guild}."
+        )
+        local_logger.exception(e)
+        raise e

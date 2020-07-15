@@ -71,8 +71,13 @@ class Development(commands.Cog):
     @commands.command()
     async def dev(self, ctx):
         """sends the developement server URL to the author of the message"""
-        tr = Translator(name, get_lang(ctx))
+        tr = Translator(name, get_lang(ctx.guild.id))
         await ctx.author.send(tr["dev"] + DEV_SRV_URL)
+
+    @commands.command()
+    @is_runner()
+    async def eval(self, ctx, *, expression):
+        await ctx.send("```py\n" + eval(expression) + "```")
 
 
 def setup(bot):

@@ -34,7 +34,7 @@ class RoleConfigEntry(ConfigEntry):
         super().__init__(bot, config_chan_id)
 
     async def run(self, ctx):
-        tr = Translator(name, get_lang(ctx))
+        tr = Translator(name, get_lang(ctx.guild.id))
         try:
             await ctx.send(tr["start_conf"])
             free_roles = []
@@ -88,7 +88,7 @@ class Role(commands.Cog):
     @role.command()
     async def add(self, ctx, member: discord.Member, *roles: discord.Role):
         """Gives <member> listed <roles> roles"""
-        tr = Translator(name, get_lang(ctx))
+        tr = Translator(name, get_lang(ctx.guild.id))
         # checking if member can self-assing role(s)
         if not has_auth("admin")(ctx):
             allowed_roles = []

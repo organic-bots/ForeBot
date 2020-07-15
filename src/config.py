@@ -46,7 +46,7 @@ class MendatoryConfigEntries(ConfigEntry):
             while not good:
                 lang = await self.get_answer(
                     ctx,
-                    f"I'm an international robot and tend to opperate in many places. This also means that I speak many language! The list of supported languages can be found on my website {WEBSITE}. So which do you want to speak with? Languages are expressed in their 2 letter code. You can choose from this list: {ALLOWED_LANGS}",
+                    f"I'm an international robot and tend to operate in many places. This also means that I speak many language! The list of supported languages can be found on my website {WEBSITE}. So which do you want to speak with? Languages are expressed in their 2 letter code.",
                 )
                 if not self.is_valid(lang.content):
                     continue
@@ -63,7 +63,7 @@ class MendatoryConfigEntries(ConfigEntry):
                 "Role setup is **mandatory** for the bot to work correctly. Otherwise no one will be able to use administration commands."
             )
             await self.config_channel.send(
-                "**\nStarting role configuration**\nThis bot uses two level of clearance for its commands.\nThe first one is the **manager** level of clearance. Everyone with a role with this clearance can use commands related to server management. This includes but is not limited to message management and issuing warnings.\nThe second level of clearance is **admin**. Anyone who has a role with this level of clearance can use all commands but the ones related to the bot configuration. This is reserved to the server owner. All roles with this level of clearance inherit **manager** clearance as well."
+                "**\nStarting role configuration**\nThis bot uses two hierachical level of clearance plus an independant one for its commands.\nThe first level of clearance is **admin**. Anyone who has a role with this level of clearance can use all commands but the ones related to the bot configuration. This is reserved to the server owner. All roles with this level of clearance inherit **manager** clearance as well.\nThe second one is the **manager** level of clearance. Everyone with a role with this clearance can use commands related to server management. This includes but is not limited to message management and issuing warnings.\nThe last is **planner** and allows its bearers to post events in the server."
             )
 
             new_roles = []
@@ -136,6 +136,7 @@ class MendatoryConfigEntries(ConfigEntry):
             with ConfigFile(ctx.guild.id) as conf:
                 conf["roles"]["manager"] = new_roles[0]
                 conf["roles"]["admin"] = new_roles[1]
+                conf["roles"]["planner"] = new_roles[2]
 
             await self.config_channel.send("Successfully updated role configuration")
 

@@ -42,7 +42,7 @@ class EssentialsConfigEntry(ConfigEntry):
 
     async def run(self, ctx):
         # welcome & goodbye messages
-        tr = Translator(name, get_lang(ctx))
+        tr = Translator(name, get_lang(ctx.guild.id))
         msgs = {
             "welcome": [tr["welcome1"], tr["welcome2"]],
             "goodbye": [tr["goodbye1"], tr["goodbye2"]],
@@ -94,7 +94,7 @@ class Essentials(commands.Cog):
     @commands.Cog.listener()
     async def on_command_error(self, ctx, error):
         """handles command errors"""
-        #raise error
+        raise error
         local_logger.error(error)
         if type(error) in ERRS_MAPPING.keys():
             msg = get_embed_err(ERRS_MAPPING[type(error)])
@@ -108,8 +108,7 @@ class Essentials(commands.Cog):
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild):
-        with open(os.path.join(CONFIG_FOLDER, f"{guild.id}.json"), "w") as file:
-            json.dump(DEFAULT_SERVER_FILE)
+        ConfigFile(guild.id, default=DEFAULT_SERVER_FILE)
         await guild.owner.send(
             f"I was just added to your server. For me to work correctly (or at all) on your server you should send `::init` in any channel of your {guild.name} server."
         )
@@ -147,7 +146,7 @@ class Essentials(commands.Cog):
     @commands.command()
     async def ping(self, ctx):
         """This command responds with the current latency."""
-        tr = Translator(name, get_lang(ctx))
+        tr = Translator(name, get_lang(ctx.guild.id))
         latency = self.bot.latency
         await ctx.send(EMOJIS["ping_pong"] + tr["latency"].format(latency))
 
@@ -167,7 +166,7 @@ class Essentials(commands.Cog):
     @commands.command()
     @has_auth("manager")
     async def clear(self, ctx, *filters):
-        """deletes specified <nbr> number of messages in the current channel"""
+        """deletes specified <nbr> number of messages in the current channel."""
         # building arguments
         filters = list(filters)
         nbr = None
@@ -198,7 +197,11 @@ class Essentials(commands.Cog):
         if period:
             hist_args["after"] = period
         if nbr and not members:
-            hist_args["limit"] = nbr + 1
+            nbr += 1
+            hist_args["limit"] = nbr
+        if members:
+            await ctx.message.delete()
+
         if not (period or nbr):
             raise discord.ext.commands.ArgumentParsingError(
                 "Can't delete all messages of a user!"
@@ -208,18 +211,18 @@ class Essentials(commands.Cog):
         now = datetime.datetime.now()
         async for msg in ctx.channel.history(**hist_args):
             if not members or msg.author in members:
-                local_logger.info(
+                local_logger.debug(
                     f"Deleting message {msg.jump_url} from guild {msg.guild.name}."
                 )
-                if (msg.created_at - now).days >= -14:
+                if (msg.created_at - now).days <= -14:
                     await msg.delete()
                 else:
                     to_del.append(msg)
 
                 if nbr != None:
+                    nbr -= 1
                     if nbr <= 0:
                         break
-                    nbr -= 1
 
         try:
             await ctx.channel.delete_messages(to_del)
@@ -234,7 +237,7 @@ class Essentials(commands.Cog):
     @commands.command()
     async def status(self, ctx):
         """returns some statistics about the server and their members"""
-        tr = Translator(name, get_lang(ctx))
+        tr = Translator(name, get_lang(ctx.guild.id))
         stats = discord.Embed(
             name=tr["stats_name"],
             description=tr["stats_description"].format(
