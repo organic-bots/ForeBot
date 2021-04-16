@@ -1,6 +1,0 @@
-{
-	"cfg": ["used to start to configure the way the bot should work on your server. See `cfg <extension>` for more information on a specific command.", "` disabled"],
-	"init": ["starts the configuration of **all** loaded extensions plus a few miscelleanous ones that can only be accessed through this command. Should ne used upon bot addition to server or when making a full re-configuration of the bot or clearances.", "` starts full configuration"],
-    "summary": ["returns the bot settings for this server in the form of an embed.", "` returns bot settings"]
-
-}

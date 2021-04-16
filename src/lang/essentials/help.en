@@ -1,6 +1,0 @@
-{
-	"ping": ["pongs back with current latency!", "` tells you the latency"],
-	"shutdown": ["shutdown the bot", "` shuts the bot down"],
-	"clear": ["this command lets one delete messages from a channel. The provided arguments are filters that will be applied to the messages selection process. `nbr` specifies the maximum number of messages that should be deleted. If not given then there is no maximum, **be careful with it**. This will always be respected although less messages may get deleted if `period` doesn't contain enough messages. `period` represents a time frame. The bot will look for all messages within this time frame. It should be constructed like `remind`. All messages which were sent between *now* and `period` will get deleted unless this represents more messages than `nbr`. `members...` is a list of server members. Only messages from these users will get deleted. You do not need to pass any of the arguments to the command and can pass any combination of them to the command. However they **must** be given in order!", "[nbr] [period] [members...]` deletes `nbr` message(s) from `members` in the currenct channel within `period`."],
-	"status": ["returns statistics about the server and their members", "` embed stats about the server."]
-}

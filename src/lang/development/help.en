@@ -1,5 +1,0 @@
-{
-	"update": ["Lets the owner of the bot update the bot from github's repositery. It also sends a notification to all server owners who use the bot. The message sent in the notification is the description of the release on github.", "[message...]` sends message to all owners of the bot."],
-	"log": ["Returns the bot's log as an attachement", "` returns the log as an attachement"],
-	"dev": ["Sends the development server URL to the author of the message", "` resolves an invite"]
-}

@@ -1,7 +1,0 @@
-{
-	"role": ["role management utility. Requires a Gestion role", {
-		"add": ["Give roles to a member.", "<member> [roles...]` gives *roles* to *member*"],
-		"rm": ["Remove roles from a member.", "<member> [roles...]` removes *roles* from *member*"],
-        "free": ["Lists all free roles on this server.", "` returns a list of free roles"]
-	}]
-}
